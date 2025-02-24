@@ -137,6 +137,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.gitignore" />
+    <None Include="raytracer_fragment.fs" />
+    <None Include="raytracer_vertex.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

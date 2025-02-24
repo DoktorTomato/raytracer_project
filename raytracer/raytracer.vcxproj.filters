@@ -24,5 +24,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.gitignore" />
+    <None Include="raytracer_fragment.fs">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="raytracer_vertex.vs">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -1,22 +1,19 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-const char* vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-const char* fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);\n"
-"}\n\0";
+std::string loadShaderSource(const char* filepath) {
+    std::ifstream file(filepath);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -58,6 +55,8 @@ int main()
     }
 
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    std::string vertCode = loadShaderSource("raytracer_vertex.vs");
+    const char* vertexShaderSource = vertCode.c_str();
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
 
@@ -71,6 +70,8 @@ int main()
     }
 
     unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    std::string fragCode = loadShaderSource("raytracer_fragment.fs");
+    const char* fragmentShaderSource = fragCode.c_str();
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
 
