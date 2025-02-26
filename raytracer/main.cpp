@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <chrono>
+#include <vector>
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -116,21 +118,50 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    auto lastTime = std::chrono::high_resolution_clock::now();
+    int frameCount = 0;
+    std::vector<float> frameTimes;
+    std::vector<int> sphereCounts;
+    
+
     while (!glfwWindowShouldClose(window))
     {
+        auto frameStartTime = std::chrono::high_resolution_clock::now();
+
         escExit(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
 
-        glUseProgram(shaderProgram);
+        glUseProgram(shaderProgram);        
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        auto frameEndTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> frameTime = frameEndTime - frameStartTime;
+        frameTimes.push_back(frameTime.count() * 1000.0f);
+        sphereCounts.push_back(50);
+
+        frameCount++;
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> elapsed = currentTime - lastTime;
+        if (elapsed.count() >= 1.0f) {
+            std::cout << "FPS: " << frameCount << std::endl;
+            frameCount = 0;
+            lastTime = currentTime;
+        }
     }
+
+    std::ofstream outFile("performance_metrics_50.csv");
+    outFile << "Frame,FrameTime_ms,Spheres" << std::endl;
+    for (size_t i = 0; i < frameTimes.size(); ++i) {
+        outFile << i + 1 << "," << frameTimes[i] << "," << sphereCounts[i] << std::endl;
+    }
+    outFile.close();
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
