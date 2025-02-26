@@ -3,7 +3,7 @@
 out vec4 FragColor;
 in vec2 fragCoord;
 
-const int amountOfSpheres = 3;
+const int amountOfSpheres = 50;
 
 struct Ray
 {
@@ -46,26 +46,37 @@ void tracingRay(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres)
 	}
 }
 
+float rand(float seed) {
+    return fract(sin(seed * 12.9898));
+}
+
+Sphere createSphere(int index) {
+    float seed = float(index) * 1.1234;
+    
+    float x = rand(seed) * 2.0 - 1.0;
+    float y = rand(seed + 1.0) - rand(seed*1.5);
+    float z = rand(seed + 3.0) * rand(seed*1.5);
+    float radius = 0.2 + rand(seed + 5.0) * 0.1;
+
+    vec4 color = vec4(rand(seed + 4.0), rand(seed + 5.0), rand(seed + 6.0), 1.0);
+
+    Sphere s;
+    s.center = vec3(x, y, z);
+    s.radius = radius;
+    s.color = color;
+    return s;
+}
+
 void main()
 {
 	vec3 origin = vec3(0.0f, 0.0f, -1.0f);
 
-	Sphere sphere1;
-	sphere1.center = vec3(0.7f, 0.8f, 1.0f);
-	sphere1.radius = 0.3f;
-	sphere1.color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	Sphere spheres[amountOfSpheres];
 
-	Sphere sphere2;
-	sphere2.center = vec3(0.0f, 0.0f, 0.0f);
-	sphere2.radius = 0.3f;
-	sphere2.color = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+	for (int i = 0; i < amountOfSpheres; i++) {
+        spheres[i] = createSphere(i);
+    }
 
-	Sphere sphere3;
-	sphere3.center = vec3(0.7f, 1.2f, 1.0f);
-	sphere3.radius = 0.3f;
-	sphere3.color = vec4(0.0f, 1.0f, 1.0f, 1.0f);
-
-	Sphere spheres[amountOfSpheres] = Sphere[](sphere1, sphere2, sphere3);
 	Ray ray;
 	ray.origin = origin;
     ray.direction = vec3(fragCoord, -1.0f);
