@@ -3,7 +3,11 @@
 out vec4 FragColor;
 in vec2 fragCoord;
 
-const int amountOfSpheres = 50;
+uniform vec3 cameraPos;
+uniform mat4 view;
+uniform mat4 projection;
+
+const int amountOfSpheres = 10;
 
 struct Ray
 {
@@ -20,6 +24,9 @@ struct Sphere
 
 void tracingRay(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres)
 {
+	float tClosest = 1e8;
+    bool hit = false;
+    vec4 hitColor = vec4(0.0);
 	bool flag = true;
 	for (int i=0; i<amountOfSpheres; i++)
 	{
@@ -31,19 +38,23 @@ void tracingRay(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres)
 
 		float disc = (b * b) - (4.0f * a * c);
 
-		float t0 = (-b - sqrt(disc)) / (2.0f * a);
-		float t1 = (-b + sqrt(disc)) / (2.0f * a);
-		if (disc >= 0.0f)
-		{
-			FragColor = sphere.color;
-			flag = false;
-			break;
-		}
-	}
-	if (flag)
-	{
-		FragColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-	}
+		if (disc >= 0.0) {
+            float sqrtDisc = sqrt(disc);
+            float t0 = (-b - sqrtDisc) / (2.0 * a);
+            float t1 = (-b + sqrtDisc) / (2.0 * a);
+            float t = (t0 > 0.0) ? t0 : t1;
+            if(t > 0.0 && t < tClosest) {
+                tClosest = t;
+                hitColor = sphere.color;
+                hit = true;
+            }
+        }
+    }
+    if (hit) {
+        FragColor = hitColor;
+    } else {
+        FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    }
 }
 
 float rand(float seed) {
@@ -69,17 +80,22 @@ Sphere createSphere(int index) {
 
 void main()
 {
-	vec3 origin = vec3(0.0f, 0.0f, -1.0f);
+    vec2 ndc = fragCoord * 2.0 - 1.0;
 
-	Sphere spheres[amountOfSpheres];
+    vec4 clipSpace = vec4(ndc, -1.0, 1.0);
+    vec4 eyeSpace = inverse(projection) * clipSpace;
+    eyeSpace = vec4(eyeSpace.xy, -1.0, 0.0); 
 
-	for (int i = 0; i < amountOfSpheres; i++) {
+    vec3 rayDirWorld = normalize((inverse(view) * eyeSpace).xyz);
+
+    Ray ray;
+    ray.origin = cameraPos;
+    ray.direction = rayDirWorld;
+
+    Sphere spheres[amountOfSpheres];
+    for (int i = 0; i < amountOfSpheres; i++) {
         spheres[i] = createSphere(i);
     }
 
-	Ray ray;
-	ray.origin = origin;
-    ray.direction = vec3(fragCoord, -1.0f);
-
-	tracingRay(ray, spheres, amountOfSpheres);
+    tracingRay(ray, spheres, amountOfSpheres);
 }
