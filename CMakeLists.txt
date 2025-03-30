@@ -13,7 +13,11 @@ set(SOURCES
 
 # Link GLFW
 find_package(glfw3 REQUIRED)
-link_directories(${CMAKE_SOURCE_DIR}/lib)
+if(WIN32)
+    link_directories(${CMAKE_SOURCE_DIR}/lib/Windows)
+else()
+    link_directories(${CMAKE_SOURCE_DIR}/lib/MacOS)
+endif()
 
 add_executable(raytracer ${SOURCES})
 
