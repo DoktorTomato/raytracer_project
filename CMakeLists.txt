@@ -20,7 +20,7 @@ add_executable(raytracer ${SOURCES})
 if(APPLE)
     target_link_libraries(raytracer glfw "-framework OpenGL")
 else()
-    target_link_libraries(raytracer glfw glfw3 GL)
+    target_link_libraries(raytracer glfw GL)
 endif()
 
 add_custom_command(
