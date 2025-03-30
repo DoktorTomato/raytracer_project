@@ -30,7 +30,7 @@ struct Triangle
     vec4 color;
 };
 
-bool tracingTriagle(Ray ray, Triangle triangle,out float t, out vec4 hitColor) {
+bool tracingTriagle(Ray ray, Triangle triangle,out float t, out vec4 hitColor, out float tClosest) {
     const float eps = 0.001;
 
     vec3 edge1 = triangle.v2 - triangle.v1;
@@ -53,14 +53,15 @@ bool tracingTriagle(Ray ray, Triangle triangle,out float t, out vec4 hitColor) {
 
     t = inv_det * dot(edge2, ray_cross_e1);
     
-    if (t > eps) {
+    if (t > eps && t < tClosest) {
+        tClosest = t;
         hitColor = triangle.color;
         return true;
     }
     return false;
 }
 
-bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor)
+bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor, out float tClosest)
 {
     vec3 oc = ray.origin - sphere.center;
     float a = dot(ray.direction, ray.direction);
@@ -74,8 +75,11 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor)
         float t0 = (-b - sqrtDisc) / (2.0 * a);
         float t1 = (-b + sqrtDisc) / (2.0 * a);
         float t = (t0 > 0.0) ? t0 : t1;
-        hitColor = sphere.color;
-        return true;
+        if(t > 0.0 && t < tClosest) {
+            tClosest = t;
+            hitColor = sphere.color;
+            return true;
+        }
     }
     return false;
 }
@@ -87,15 +91,14 @@ void rayTrace(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres, Tri
 
     for (int i=0; i<amountOfSpheres; i++)
 	{
-		if (tracingSphere(ray, spheres[i], t, hitColor) && t < tClosest) {
-            tClosest = t;
+		if (tracingSphere(ray, spheres[i], t, hitColor, tClosest) && t < tClosest) {
             FragColor = hitColor;
         }
     }
 
     for (int i=0; i<amountOfTri; i++)
 	{
-		if (tracingTriagle(ray, triangles[i], t, hitColor) && t < tClosest) {
+		if (tracingTriagle(ray, triangles[i], t, hitColor, tClosest) && t < tClosest) {
             tClosest = t;
             FragColor = hitColor;
         }
