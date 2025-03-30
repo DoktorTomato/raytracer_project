@@ -30,6 +30,51 @@ struct Triangle
     vec4 color;
 };
 
+struct Cube {
+    vec3 center;
+    float size;
+    vec4 color;
+    Triangle triangles[12];
+};
+
+Cube createCube(vec3 center, float size, vec4 color) {
+    Cube cube;
+    cube.center = center;
+    cube.size = size;
+    cube.color = color;
+
+    float hs = size * 0.5;
+
+    vec3 v0 = center + vec3(-hs, -hs, -hs);
+    vec3 v1 = center + vec3( hs, -hs, -hs);
+    vec3 v2 = center + vec3( hs,  hs, -hs);
+    vec3 v3 = center + vec3(-hs,  hs, -hs);
+    vec3 v4 = center + vec3(-hs, -hs,  hs);
+    vec3 v5 = center + vec3( hs, -hs,  hs);
+    vec3 v6 = center + vec3( hs,  hs,  hs);
+    vec3 v7 = center + vec3(-hs,  hs,  hs);
+
+    cube.triangles[0]  = Triangle(v0, v1, v2, color);
+    cube.triangles[1]  = Triangle(v0, v2, v3, color);
+    
+    cube.triangles[2]  = Triangle(v1, v5, v6, color);
+    cube.triangles[3]  = Triangle(v1, v6, v2, color);
+    
+    cube.triangles[4]  = Triangle(v5, v4, v7, color);
+    cube.triangles[5]  = Triangle(v5, v7, v6, color);
+    
+    cube.triangles[6]  = Triangle(v4, v0, v3, color);
+    cube.triangles[7]  = Triangle(v4, v3, v7, color);
+    
+    cube.triangles[8]  = Triangle(v3, v2, v6, color);
+    cube.triangles[9]  = Triangle(v3, v6, v7, color);
+    
+    cube.triangles[10] = Triangle(v4, v5, v1, color);
+    cube.triangles[11] = Triangle(v4, v1, v0, color);
+
+    return cube;
+}
+
 bool tracingTriagle(Ray ray, Triangle triangle,out float t, out vec4 hitColor, out float tClosest) {
     const float eps = 0.001;
 
@@ -84,7 +129,7 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor, out f
     return false;
 }
 
-void rayTrace(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres, Triangle[1] triangles, int amountOfTri) {
+void rayTrace(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres, Triangle[1] triangles, int amountOfTri, Cube[1] cubes, int amountOfCubes) {
     float tClosest = 1e8;
     vec4 hitColor = vec4(0.0);
     float t;
@@ -99,8 +144,17 @@ void rayTrace(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres, Tri
     for (int i=0; i<amountOfTri; i++)
 	{
 		if (tracingTriagle(ray, triangles[i], t, hitColor, tClosest) && t < tClosest) {
-            tClosest = t;
             FragColor = hitColor;
+        }
+    }
+
+    for (int i=0; i<amountOfCubes; i++)
+	{
+        for (int j=0; j<12; j++)
+        {
+            if (tracingTriagle(ray, cubes[i].triangles[j], t, hitColor, tClosest) && t < tClosest) {
+                FragColor = hitColor;
+            }
         }
     }
     
@@ -160,5 +214,10 @@ void main()
     Triangle triangles[1];
     triangles[0] = tri;
 
-    rayTrace(ray, spheres, amountOfSpheres, triangles, 1);
+    Cube cube = createCube(vec3(0.0, 0.0, 0.0), 0.5, vec4(0.0, 1.0, 0.0, 0.3));
+
+    Cube cubes[1];
+    cubes[0] = cube;
+
+    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, 1);
 }
