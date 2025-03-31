@@ -22,6 +22,12 @@ struct Sphere
 	vec4 color;
 };
 
+struct DirLight
+{
+    Ray ray;
+    vec4 color;
+};
+
 struct Triangle
 {
     vec3 v1;
@@ -75,7 +81,7 @@ Cube createCube(vec3 center, float size, vec4 color) {
     return cube;
 }
 
-bool tracingTriagle(Ray ray, Triangle triangle,out float t, out vec4 hitColor, out float tClosest) {
+bool tracingTriagle(Ray ray, Triangle triangle, out float t, out vec4 hitColor, out float tClosest, DirLight[1] lights, int amountOfLight) {
     const float eps = 0.001;
 
     vec3 edge1 = triangle.v2 - triangle.v1;
@@ -99,14 +105,37 @@ bool tracingTriagle(Ray ray, Triangle triangle,out float t, out vec4 hitColor, o
     t = inv_det * dot(edge2, ray_cross_e1);
     
     if (t > eps && t < tClosest) {
+
+        vec4 finColor = vec4(0.0);
+        vec3 pos = ray.origin + ray.direction * t;
+        for (int i=0; i<amountOfLight; i++)
+        {
+            DirLight light = lights[i];
+            vec3 norm = normalize(cross(edge1, edge2));
+            if (dot(norm, ray.direction) > 0.0) {
+                norm = -norm;
+            }
+            vec3 lightDir = normalize(light.ray.origin - pos);
+            vec3 viewDir = normalize(ray.origin - pos);
+            vec3 reflectDir = reflect(-lightDir, norm);
+            float specFactor = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+
+            vec4 diff = max(dot(norm, lightDir), 0.0) * triangle.color * light.color;
+            vec4 spec = specFactor * light.color;
+            vec4 ambient = 0.1 * triangle.color * light.color;
+
+            finColor += (diff + spec + ambient);
+            finColor = clamp(finColor, 0.0, 1.0);
+        }
+
         tClosest = t;
-        hitColor = triangle.color;
+        hitColor = finColor;
         return true;
     }
     return false;
 }
 
-bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor, out float tClosest)
+bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor, out float tClosest, DirLight[1] lights, int amountOfLight)
 {
     vec3 oc = ray.origin - sphere.center;
     float a = dot(ray.direction, ray.direction);
@@ -121,29 +150,48 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor, out f
         float t1 = (-b + sqrtDisc) / (2.0 * a);
         float t = (t0 > 0.0) ? t0 : t1;
         if(t > 0.0 && t < tClosest) {
+            vec4 finColor = vec4(0.0);
+            vec3 pos = ray.origin + ray.direction * t;
+            for (int i=0; i<amountOfLight; i++)
+            {
+                DirLight light = lights[i];
+                vec3 norm = (pos - sphere.center) / sphere.radius;
+                vec3 lightDir = normalize(light.ray.origin - pos);
+                vec3 viewDir = normalize(ray.origin - pos);
+                vec3 reflectDir = reflect(-lightDir, norm);
+
+                vec4 diff = max(dot(norm, lightDir), 0.0) * sphere.color * light.color;
+                vec4 spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
+                vec4 ambient = 0.1 * sphere.color * light.color;
+
+                finColor += (diff + spec + ambient);
+
+                // Prevent over-brightening by clamping the result
+                finColor = clamp(finColor, 0.0, 1.0);
+            }
             tClosest = t;
-            hitColor = sphere.color;
+            hitColor = finColor;
             return true;
         }
     }
     return false;
 }
 
-void rayTrace(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres, Triangle[1] triangles, int amountOfTri, Cube[1] cubes, int amountOfCubes) {
+void rayTrace(Ray ray,Sphere[amountOfSpheres] spheres, int amountOfSpheres, Triangle[1] triangles, int amountOfTri, Cube[1] cubes, int amountOfCubes, DirLight[1] light, int amountOfLight) {
     float tClosest = 1e8;
     vec4 hitColor = vec4(0.0);
     float t;
 
     for (int i=0; i<amountOfSpheres; i++)
 	{
-		if (tracingSphere(ray, spheres[i], t, hitColor, tClosest) && t < tClosest) {
+		if (tracingSphere(ray, spheres[i], t, hitColor, tClosest, light, amountOfLight) && t < tClosest) {
             FragColor = hitColor;
         }
     }
 
     for (int i=0; i<amountOfTri; i++)
 	{
-		if (tracingTriagle(ray, triangles[i], t, hitColor, tClosest) && t < tClosest) {
+		if (tracingTriagle(ray, triangles[i], t, hitColor, tClosest, light, amountOfLight) && t < tClosest) {
             FragColor = hitColor;
         }
     }
@@ -152,7 +200,7 @@ void rayTrace(Ray ray, Sphere[amountOfSpheres] spheres, int amountOfSpheres, Tri
 	{
         for (int j=0; j<12; j++)
         {
-            if (tracingTriagle(ray, cubes[i].triangles[j], t, hitColor, tClosest) && t < tClosest) {
+            if (tracingTriagle(ray, cubes[i].triangles[j], t, hitColor, tClosest, light, amountOfLight) && t < tClosest) {
                 FragColor = hitColor;
             }
         }
@@ -219,5 +267,15 @@ void main()
     Cube cubes[1];
     cubes[0] = cube;
 
-    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, 1);
+    DirLight light;
+    Ray lRay;
+    lRay.origin = vec3(1, 1, 1);
+    lRay.direction = vec3(0.0, 0.0, 0.0);
+    light.ray = lRay;
+    light.color = vec4(1.0, 1.0, 1.0, 1.0);
+
+    DirLight lights[1];
+    lights[0] = light;
+
+    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, 1, lights, 1);
 }
