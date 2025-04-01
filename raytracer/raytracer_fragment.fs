@@ -11,19 +11,20 @@ const int amountOfSpheres = 10;
 
 struct Ray
 {
-	vec3 origin;
-	vec3 direction;
+    vec3 origin;
+    vec3 direction;
 };
 
 struct Sphere
 {
-	vec3 center;
-	float radius;
-	vec4 color;
+    vec3 center;
+    float radius;
+    vec4 color;
 };
 
 struct DirLight
 {
+    // Not used in this implementation since we use fixed LIGHT_DIR/LIGHT_COLOR.
     Ray ray;
     vec4 color;
 };
@@ -36,7 +37,8 @@ struct Triangle
     vec4 color;
 };
 
-struct Cube {
+struct Cube
+{
     vec3 center;
     float size;
     vec4 color;
@@ -81,7 +83,7 @@ Cube createCube(vec3 center, float size, vec4 color) {
     return cube;
 }
 
-bool tracingTriagle(Ray ray, Triangle triangle, out float t, out vec4 hitColor, out float tClosest, DirLight[1] lights, int amountOfLight) {
+bool tracingTriagle(Ray ray, Triangle triangle, out float t, out vec3 hitNormal, inout float tClosest) {
     const float eps = 0.001;
 
     vec3 edge1 = triangle.v2 - triangle.v1;
@@ -102,41 +104,20 @@ bool tracingTriagle(Ray ray, Triangle triangle, out float t, out vec4 hitColor, 
 
     if (v < 0.0 || u + v > 1.0) return false;
 
-    t = inv_det * dot(edge2, ray_cross_e1);
-    
-    if (t > eps && t < tClosest) {
+    float tCandidate = inv_det * dot(edge2, ray_cross_e1);
 
-        vec4 finColor = vec4(0.0);
-        vec3 pos = ray.origin + ray.direction * t;
-        for (int i=0; i<amountOfLight; i++)
-        {
-            DirLight light = lights[i];
-            vec3 norm = normalize(cross(edge1, edge2));
-            if (dot(norm, ray.direction) > 0.0) {
-                norm = -norm;
-            }
-            vec3 lightDir = normalize(light.ray.origin - pos);
-            vec3 viewDir = normalize(ray.origin - pos);
-            vec3 reflectDir = reflect(-lightDir, norm);
-            float specFactor = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
-
-            vec4 diff = max(dot(norm, lightDir), 0.0) * triangle.color * light.color;
-            vec4 spec = specFactor * light.color;
-            vec4 ambient = 0.1 * triangle.color * light.color;
-
-            finColor += (diff + spec + ambient);
-            finColor = clamp(finColor, 0.0, 1.0);
-        }
-
-        tClosest = t;
-        hitColor = finColor;
+    if (tCandidate > eps && tCandidate < tClosest) {
+        t = tCandidate;
+        hitNormal = normalize(cross(edge1, edge2));
+        if (dot(hitNormal, ray.direction) > 0.0)
+            hitNormal = -hitNormal;
+        tClosest = tCandidate;
         return true;
     }
     return false;
 }
 
-bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor, out float tClosest, DirLight[1] lights, int amountOfLight)
-{
+bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec3 hitNormal, inout float tClosest) {
     vec3 oc = ray.origin - sphere.center;
     float a = dot(ray.direction, ray.direction);
     float b = 2.0f * dot(oc, ray.direction);
@@ -144,70 +125,80 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec4 hitColor, out f
 
     float disc = (b * b) - (4.0f * a * c);
 
-    if (disc >= 0.0) {
-        float sqrtDisc = sqrt(disc);
-        float t0 = (-b - sqrtDisc) / (2.0 * a);
-        float t1 = (-b + sqrtDisc) / (2.0 * a);
-        float t = (t0 > 0.0) ? t0 : t1;
-        if(t > 0.0 && t < tClosest) {
-            vec4 finColor = vec4(0.0);
-            vec3 pos = ray.origin + ray.direction * t;
-            for (int i=0; i<amountOfLight; i++)
-            {
-                DirLight light = lights[i];
-                vec3 norm = (pos - sphere.center) / sphere.radius;
-                vec3 lightDir = normalize(light.ray.origin - pos);
-                vec3 viewDir = normalize(ray.origin - pos);
-                vec3 reflectDir = reflect(-lightDir, norm);
+    if (disc < 0.0)
+        return false;
 
-                vec4 diff = max(dot(norm, lightDir), 0.0) * sphere.color * light.color;
-                vec4 spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
-                vec4 ambient = 0.1 * sphere.color * light.color;
-
-                finColor += (diff + spec + ambient);
-
-                // Prevent over-brightening by clamping the result
-                finColor = clamp(finColor, 0.0, 1.0);
-            }
-            tClosest = t;
-            hitColor = finColor;
-            return true;
-        }
+    float sqrtDisc = sqrt(disc);
+    float t0 = (-b - sqrtDisc) / (2.0 * a);
+    float t1 = (-b + sqrtDisc) / (2.0 * a);
+    float tCandidate = (t0 > 0.001) ? t0 : t1;
+    
+    if (tCandidate > 0.001 && tCandidate < tClosest) {
+        t = tCandidate;
+        vec3 pos = ray.origin + tCandidate * ray.direction;
+        hitNormal = normalize(pos - sphere.center);
+        tClosest = tCandidate;
+        return true;
     }
     return false;
 }
 
-void rayTrace(Ray ray,Sphere[amountOfSpheres] spheres, int amountOfSpheres, Triangle[1] triangles, int amountOfTri, Cube[1] cubes, int amountOfCubes, DirLight[1] light, int amountOfLight) {
+void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Triangle triangles[1], int amountOfTri, Cube[1] cubes, int amountOfCubes, DirLight[1] lights, int amountOfLight) {
     float tClosest = 1e8;
-    vec4 hitColor = vec4(0.0);
+    vec4 objColor = vec4(0.0);
+    vec3 hitNormal = vec3(0.0);
     float t;
-
-    for (int i=0; i<amountOfSpheres; i++)
-	{
-		if (tracingSphere(ray, spheres[i], t, hitColor, tClosest, light, amountOfLight) && t < tClosest) {
-            FragColor = hitColor;
+    bool hitSomething = false;
+    
+    for (int i = 0; i < amountOfSpheres; i++) {
+        vec3 n;
+        if (tracingSphere(ray, spheres[i], t, n, tClosest)) {
+            hitSomething = true;
+            objColor = spheres[i].color;
+            hitNormal = n;
         }
     }
-
-    for (int i=0; i<amountOfTri; i++)
-	{
-		if (tracingTriagle(ray, triangles[i], t, hitColor, tClosest, light, amountOfLight) && t < tClosest) {
-            FragColor = hitColor;
+    
+    for (int i = 0; i < amountOfTri; i++) {
+        vec3 n;
+        if (tracingTriagle(ray, triangles[i], t, n, tClosest)) {
+            hitSomething = true;
+            objColor = triangles[i].color;
+            hitNormal = n;
         }
     }
 
     for (int i=0; i<amountOfCubes; i++)
 	{
-        for (int j=0; j<12; j++)
+        for (int j = 0; j < 12; j++)
         {
-            if (tracingTriagle(ray, cubes[i].triangles[j], t, hitColor, tClosest, light, amountOfLight) && t < tClosest) {
-                FragColor = hitColor;
+            vec3 n;
+            if (tracingTriagle(ray, cubes[i].triangles[j], t, n, tClosest)) {
+                hitSomething = true;
+                objColor = cubes[i].triangles[j].color;
+                hitNormal = n;
             }
         }
     }
-    
-    if (tClosest < 1e8) {
-        FragColor = hitColor;
+
+    if (hitSomething) {
+        vec3 pos = ray.origin + tClosest * ray.direction;
+        
+        vec4 finColor = vec4(0.0);
+        for (int i = 0; i < amountOfLight; i++) {
+            DirLight light = lights[i];
+            vec3 lightDir = normalize(light.ray.origin - pos);
+            vec3 viewDir = normalize(ray.origin - pos);
+            vec3 reflectDir = reflect(-lightDir, hitNormal);
+            
+            vec4 diff = max(dot(hitNormal, lightDir), 0.0) * objColor * light.color;
+            vec4 spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
+            vec4 ambient = 0.1 * objColor * light.color;
+            
+            finColor += (diff + spec + ambient);
+            finColor = clamp(finColor, 0.0, 1.0);
+        }
+        FragColor = finColor;
     } else {
         FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
@@ -219,7 +210,7 @@ float rand(float seed) {
 
 Sphere createSphere(int index) {
     float seed = float(index) * 1.1234;
-    
+
     float x = rand(seed) * 2.0 - 1.0;
     float y = rand(seed + 1.0) - rand(seed*1.5);
     float z = rand(seed + 3.0) * rand(seed*1.5);
@@ -240,7 +231,7 @@ void main()
 
     vec4 clipSpace = vec4(ndc, -1.0, 1.0);
     vec4 eyeSpace = inverse(projection) * clipSpace;
-    eyeSpace = vec4(eyeSpace.xy, -1.0, 0.0); 
+    eyeSpace = vec4(eyeSpace.xy, -1.0, 0.0);
 
     vec3 rayDirWorld = normalize((inverse(view) * eyeSpace).xyz);
 
