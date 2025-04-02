@@ -7,8 +7,9 @@ uniform vec3 cameraPos;
 uniform mat4 view;
 uniform mat4 projection;
 
-const int amountOfSpheres = 1;
-const int amountOfCubes = 5;
+const int amountOfSpheres = 5;
+const int amountOfCubes = 18; //from 19 and more litlle fps (on my computer) -Ivan
+const int amountOfLights = 4; //maximum amountOfLights is 6
 
 struct Ray
 {
@@ -144,7 +145,7 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec3 hitNormal, inou
     return false;
 }
 
-void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Triangle triangles[1], int amountOfTri, Cube[amountOfCubes] cubes, int amountOfCubes, DirLight[2] lights, int amountOfLight) {
+void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Triangle triangles[1], int amountOfTri, Cube[amountOfCubes] cubes, int amountOfCubes, DirLight[amountOfLights] lights, int amountOfLight) {
     float tClosest = 1e8;
     vec4 objColor = vec4(0.0);
     vec3 hitNormal = vec3(0.0);
@@ -226,6 +227,37 @@ Sphere createSphere(int index) {
     return s;
 }
 
+void generateLight(int num, out DirLight res[amountOfLights]){
+    vec3 origins[6] = {
+        vec3(1, 1, 1),
+        vec3(-1, -1, -1),
+        vec3(1, -1, -1),
+        vec3(1, 1, -1),
+        vec3(-1, -1, 1),
+        vec3(-1, 1, 1)
+    };
+
+    vec4 colors[6] = {
+        vec4(1.0, 1.0, 1.0, 1.0),
+        vec4(1.0, 0.0, 0.0, 1.0),
+        vec4(0.0, 1.0, 0.0, 1.0),
+        vec4(0.0, 0.0, 1.0, 1.0),
+        vec4(1.0, 1.0, 0.0, 1.0),
+        vec4(0.0, 1.0, 1.0, 1.0)
+    };
+
+    for (int i=0; i<amountOfLights; i++){
+        DirLight light;
+        Ray lRay;
+        lRay.origin = origins[i];
+        lRay.direction = vec3(0.0, 0.0, 0.0);
+        light.ray = lRay;
+        light.color = colors[i];
+
+        res[i] = light;
+    }
+}
+
 void main()
 {
     vec2 ndc = fragCoord * 2.0 - 1.0;
@@ -271,23 +303,10 @@ void main()
     // Cube cubes[1];
     // cubes[0] = cube;
 
-    DirLight light;
-    Ray lRay;
-    lRay.origin = vec3(1, 1, 1);
-    lRay.direction = vec3(0.0, 0.0, 0.0);
-    light.ray = lRay;
-    light.color = vec4(1.0, 1.0, 1.0, 1.0);
+    
 
-    DirLight light1;
-    Ray lRay1;
-    lRay1.origin = vec3(-1, -1, -1);
-    lRay1.direction = vec3(0.0, 0.0, 0.0);
-    light1.ray = lRay1;
-    light1.color = vec4(1.0, 0.0, 0.0, 1.0);
+    DirLight lights[amountOfLights];
+    generateLight(amountOfLights, lights);
 
-    DirLight lights[2];
-    lights[0] = light;
-    lights[1] = light1;
-
-    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, amountOfCubes, lights, 2);
+    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, amountOfCubes, lights, amountOfLights);
 }
