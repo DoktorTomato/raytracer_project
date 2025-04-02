@@ -104,6 +104,19 @@ void processInput(GLFWwindow *window)
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 }
 
+void checkShaderCompilation(GLuint shader, const std::string& shaderSource, GLFWwindow* window) {
+    int success;
+    char infoLog[1024];
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(shader, 1024, NULL, infoLog);
+        std::cout << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
+        std::cout << "Shader Source:\n" << shaderSource << std::endl; // Print the shader source
+        glfwSetWindowShouldClose(window, true);
+    }
+}
+
+
 int main()
 {
     glfwInit();
@@ -140,6 +153,7 @@ int main()
     const char* vertexShaderSource = vertCode.c_str();
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
+    checkShaderCompilation(vertexShader, vertCode, window);
 
     int success;
     char infoLog[512];
@@ -155,6 +169,7 @@ int main()
     const char* fragmentShaderSource = fragCode.c_str();
     glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
+    checkShaderCompilation(fragmentShader, fragCode, window);
 
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (!success)
@@ -201,6 +216,7 @@ int main()
     int frameCount = 0;
     std::vector<float> frameTimes;
     std::vector<int> sphereCounts;
+    
     
 
     while (!glfwWindowShouldClose(window))
@@ -252,7 +268,7 @@ int main()
         }
     }
 
-    float totalFrameTime = 0.0f;
+    /*float totalFrameTime = 0.0f;
     for (const auto& time : frameTimes) {
         totalFrameTime += time;
     }
@@ -264,7 +280,7 @@ int main()
     for (size_t i = 0; i < frameTimes.size(); ++i) {
         outFile << i + 1 << "," << frameTimes[i] << "," << sphereCounts[i] << std::endl;
     }
-    outFile.close();
+    outFile.close();*/
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);

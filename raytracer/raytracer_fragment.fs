@@ -7,7 +7,7 @@ uniform vec3 cameraPos;
 uniform mat4 view;
 uniform mat4 projection;
 
-const int amountOfSpheres = 10;
+const int amountOfSpheres = 100;
 
 struct Ray
 {
@@ -143,7 +143,7 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec3 hitNormal, inou
     return false;
 }
 
-void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Triangle triangles[1], int amountOfTri, Cube[1] cubes, int amountOfCubes, DirLight[1] lights, int amountOfLight) {
+void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Triangle triangles[1], int amountOfTri, Cube[1] cubes, int amountOfCubes, DirLight[2] lights, int amountOfLight) {
     float tClosest = 1e8;
     vec4 objColor = vec4(0.0);
     vec3 hitNormal = vec3(0.0);
@@ -265,8 +265,16 @@ void main()
     light.ray = lRay;
     light.color = vec4(1.0, 1.0, 1.0, 1.0);
 
-    DirLight lights[1];
-    lights[0] = light;
+    DirLight light1;
+    Ray lRay1;
+    lRay1.origin = vec3(-1, -1, -1);
+    lRay1.direction = vec3(0.0, 0.0, 0.0);
+    light1.ray = lRay1;
+    light1.color = vec4(1.0, 0.0, 0.0, 1.0);
 
-    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, 1, lights, 1);
+    DirLight lights[2];
+    lights[0] = light;
+    lights[1] = light1;
+
+    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, 1, lights, 2);
 }
