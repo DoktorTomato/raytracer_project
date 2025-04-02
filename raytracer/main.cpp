@@ -215,7 +215,6 @@ int main()
     auto lastTime = std::chrono::high_resolution_clock::now();
     int frameCount = 0;
     std::vector<float> frameTimes;
-    std::vector<int> sphereCounts;
     
     
 
@@ -256,7 +255,6 @@ int main()
         auto frameEndTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> frameTime = frameEndTime - frameStartTime;
         frameTimes.push_back(frameTime.count() * 1000.0f);
-        sphereCounts.push_back(10);
 
         frameCount++;
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -268,19 +266,19 @@ int main()
         }
     }
 
-    /*float totalFrameTime = 0.0f;
+    float totalFrameTime = 0.0f;
     for (const auto& time : frameTimes) {
         totalFrameTime += time;
     }
     float averageFrameTime = totalFrameTime / frameTimes.size();
     std::cout << "Average Frame Time (ms): " << averageFrameTime << std::endl;
 
-    std::ofstream outFile("performance_metrics_50.csv");
-    outFile << "Frame,FrameTime_ms,Spheres" << std::endl;
+    std::ofstream outFile("../performance_metrics_100.csv");
+    outFile << "Frame,FrameTime_ms,Cubes" << std::endl;
     for (size_t i = 0; i < frameTimes.size(); ++i) {
-        outFile << i + 1 << "," << frameTimes[i] << "," << sphereCounts[i] << std::endl;
+        outFile << i + 1 << "," << frameTimes[i] << "," << 100 << std::endl;
     }
-    outFile.close();*/
+    outFile.close();
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
