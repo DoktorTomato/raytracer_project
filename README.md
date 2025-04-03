@@ -1,6 +1,7 @@
 # Project: Concurent real time GPU Raytracer
 Authors (team): [Bykov Danylo](https://github.com/DanyaBykov), [Ivan Shevchuk](https://github.com/DoktorTomato)
-Mentor: Ostap Trush
+
+Mentor: [Ostap Trush](https://github.com/Adeon18)
 
 ## Prerequisites
 
@@ -36,4 +37,18 @@ For windows testing Visual Studio was used which makes the process of compilatio
 ### Results
 
 After running the raytracer you will see a window opened in which some figures will be traced. You can move and look around in this space using your mouse and WASD buttons on your keyboard.
-You can also change amount of objects in space by changing values of variables (amountOfSpheres, amountOfCubes, amountOfLights) in raytracer_fragment.fs. Here are some screenshots in the program:
+You can also change amount of objects in space by changing values of variables (amountOfSpheres, amountOfCubes, amountOfLights) in raytracer_fragment.fs.
+
+Here are some screenshots in the program:
+
+![](screenshots/image.png)
+
+![](screenshots/image-1.png)
+
+![](screenshots/image-2.png)
+
+![](screenshots/image-3.png)
+
+![](screenshots/image-4.png)
+
+![](screenshots/image-5.png)
