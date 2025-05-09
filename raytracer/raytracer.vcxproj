@@ -71,8 +71,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\OpenGL\Includes;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\OpenGL\Libs;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\lib\Windows;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

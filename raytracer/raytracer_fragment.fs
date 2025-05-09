@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 out vec4 FragColor;
 in vec2 fragCoord;
@@ -7,9 +7,9 @@ uniform vec3 cameraPos;
 uniform mat4 view;
 uniform mat4 projection;
 
-const int amountOfSpheres = 5;
-const int amountOfCubes = 18; //from 19 and more litlle fps (on my computer) -Ivan
-const int amountOfLights = 4; //maximum amountOfLights is 6
+uniform int numCubes;
+uniform int numSpheres;
+const int amountOfLights = 3; //maximum amountOfLights is 6
 
 struct Ray
 {
@@ -26,7 +26,6 @@ struct Sphere
 
 struct DirLight
 {
-    // Not used in this implementation since we use fixed LIGHT_DIR/LIGHT_COLOR.
     Ray ray;
     vec4 color;
 };
@@ -39,51 +38,25 @@ struct Triangle
     vec4 color;
 };
 
-struct Cube
-{
-    vec3 center;
-    float size;
+struct Object {
     vec4 color;
-    Triangle triangles[12];
+    vec3 position;
+    float scale;
+    int numTriangles;
+    int triangleOffset;
 };
 
-Cube createCube(vec3 center, float size, vec4 color) {
-    Cube cube;
-    cube.center = center;
-    cube.size = size;
-    cube.color = color;
+layout(std430, binding = 0) buffer TriangleBuffer {
+    Triangle triangles[];
+};
 
-    float hs = size * 0.5;
+layout(std430, binding = 1) buffer ObjectBuffer {
+    Object objects[];
+};
 
-    vec3 v0 = center + vec3(-hs, -hs, -hs);
-    vec3 v1 = center + vec3( hs, -hs, -hs);
-    vec3 v2 = center + vec3( hs,  hs, -hs);
-    vec3 v3 = center + vec3(-hs,  hs, -hs);
-    vec3 v4 = center + vec3(-hs, -hs,  hs);
-    vec3 v5 = center + vec3( hs, -hs,  hs);
-    vec3 v6 = center + vec3( hs,  hs,  hs);
-    vec3 v7 = center + vec3(-hs,  hs,  hs);
-
-    cube.triangles[0]  = Triangle(v0, v1, v2, color);
-    cube.triangles[1]  = Triangle(v0, v2, v3, color);
-    
-    cube.triangles[2]  = Triangle(v1, v5, v6, color);
-    cube.triangles[3]  = Triangle(v1, v6, v2, color);
-    
-    cube.triangles[4]  = Triangle(v5, v4, v7, color);
-    cube.triangles[5]  = Triangle(v5, v7, v6, color);
-    
-    cube.triangles[6]  = Triangle(v4, v0, v3, color);
-    cube.triangles[7]  = Triangle(v4, v3, v7, color);
-    
-    cube.triangles[8]  = Triangle(v3, v2, v6, color);
-    cube.triangles[9]  = Triangle(v3, v6, v7, color);
-    
-    cube.triangles[10] = Triangle(v4, v5, v1, color);
-    cube.triangles[11] = Triangle(v4, v1, v0, color);
-
-    return cube;
-}
+layout(std430, binding = 2) buffer SphereBuffer {
+    Sphere spheres[];
+};
 
 bool tracingTriagle(Ray ray, Triangle triangle, out float t, out vec3 hitNormal, inout float tClosest) {
     const float eps = 0.001;
@@ -145,14 +118,14 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec3 hitNormal, inou
     return false;
 }
 
-void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Triangle triangles[1], int amountOfTri, Cube[amountOfCubes] cubes, int amountOfCubes, DirLight[amountOfLights] lights, int amountOfLight) {
+void rayTrace(Ray ray, DirLight lights[amountOfLights], int amountOfLight) {
     float tClosest = 1e8;
     vec4 objColor = vec4(0.0);
     vec3 hitNormal = vec3(0.0);
     float t;
     bool hitSomething = false;
     
-    for (int i = 0; i < amountOfSpheres; i++) {
+    for (int i = 0; i < numSpheres; i++) {
         vec3 n;
         if (tracingSphere(ray, spheres[i], t, n, tClosest)) {
             hitSomething = true;
@@ -161,23 +134,14 @@ void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Tri
         }
     }
     
-    for (int i = 0; i < amountOfTri; i++) {
-        vec3 n;
-        if (tracingTriagle(ray, triangles[i], t, n, tClosest)) {
-            hitSomething = true;
-            objColor = triangles[i].color;
-            hitNormal = n;
-        }
-    }
-
-    for (int i=0; i<amountOfCubes; i++)
-	{
-        for (int j = 0; j < 12; j++)
-        {
+    for (int i = 0; i < numCubes; ++i) {
+        Object obj = objects[i];
+        for (int j = 0; j < obj.numTriangles; ++j) {
+            Triangle tri = triangles[obj.triangleOffset + j];
             vec3 n;
-            if (tracingTriagle(ray, cubes[i].triangles[j], t, n, tClosest)) {
+            if (tracingTriagle(ray, tri, t, n, tClosest)) {
                 hitSomething = true;
-                objColor = cubes[i].triangles[j].color;
+                objColor = tri.color;
                 hitNormal = n;
             }
         }
@@ -204,27 +168,6 @@ void rayTrace(Ray ray, Sphere spheres[amountOfSpheres], int amountOfSpheres, Tri
     } else {
         FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
-}
-
-float rand(float seed) {
-    return fract(sin(seed * 12.9898));
-}
-
-Sphere createSphere(int index) {
-    float seed = float(index) * 1.1234;
-
-    float x = rand(seed) * 2.0 - 1.0;
-    float y = rand(seed + 1.0) - rand(seed*1.5);
-    float z = rand(seed + 3.0) * rand(seed*1.5);
-    float radius = 0.2 + rand(seed + 5.0) * 0.1;
-
-    vec4 color = vec4(rand(seed + 4.0), rand(seed + 5.0), rand(seed + 6.0), 1.0);
-
-    Sphere s;
-    s.center = vec3(x, y, z);
-    s.radius = radius;
-    s.color = color;
-    return s;
 }
 
 void generateLight(int num, out DirLight res[amountOfLights]){
@@ -272,41 +215,8 @@ void main()
     ray.origin = cameraPos;
     ray.direction = rayDirWorld;
 
-    Sphere spheres[amountOfSpheres];
-    for (int i = 0; i < amountOfSpheres; i++) {
-        spheres[i] = createSphere(i);
-    }
-
-    Triangle tri;
-    tri.v1 = vec3(0.5, 0.5, 0.5);
-    tri.v2 = vec3(0.5, 0.7, 0.6);
-    tri.v3 = vec3(0.1, 0.5, 0.4);
-    tri.color = vec4(1.0, 0.0, 0.0, 1.0);
-
-    Triangle triangles[1];
-    triangles[0] = tri;
-
-    Cube cubes[amountOfCubes];
-    for (int i = 0; i < amountOfCubes; i++) {
-        float x = rand(float(i) * 1.1234) * 2.0 - 1.0;
-        float y = rand(float(i) + 1.0) - rand(float(i)*1.5);
-        float z = rand(float(i) + 3.0) * rand(float(i)*1.5);
-        float size = 0.2 + rand(float(i) + 5.0) * 0.1;
-
-        vec4 color = vec4(rand(float(i) + 4.0), rand(float(i) + 5.0), rand(float(i) + 6.0), 1.0);
-
-        Cube cube = createCube(vec3(x, y, z), size, color);
-        cubes[i] = cube;
-    }
-    // Cube cube = createCube(vec3(0.0, 0.0, 0.0), 0.5, vec4(0.0, 1.0, 0.0, 0.3));
-
-    // Cube cubes[1];
-    // cubes[0] = cube;
-
-    
-
     DirLight lights[amountOfLights];
     generateLight(amountOfLights, lights);
 
-    rayTrace(ray, spheres, amountOfSpheres, triangles, 1, cubes, amountOfCubes, lights, amountOfLights);
+    rayTrace(ray, lights, amountOfLights);
 }

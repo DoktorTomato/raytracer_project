@@ -9,9 +9,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <random>
 
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f,  3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -26,6 +27,71 @@ float fov = 45.0f;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+struct alignas(16) Sphere {
+	glm::vec3 center;
+	float radius;
+	glm::vec4 color;
+};
+
+struct alignas(16) Triangle
+{
+    glm::vec3 v1;
+    glm::vec3 v2;
+    glm::vec3 v3;
+    glm::vec4 color;
+
+    Triangle(glm::vec3 vertex1, glm::vec3 vertex2, glm::vec3 vertex3, glm::vec4 col)
+        : v1(vertex1), v2(vertex2), v3(vertex3), color(col) {
+    }
+};
+
+struct alignas(16) Object {
+	glm::vec4 color;
+	glm::vec3 position;
+    float scale;
+	int numTriangles;
+	int trianglesOffset;
+};
+
+Object createCube(glm::vec3 pos, float size, glm::vec4 color, std::vector<Triangle>& triangles) {
+    Object cube;
+    cube.position = pos;
+    cube.scale = size;
+    cube.color = color;
+
+    glm::vec3 v0 = pos;
+    glm::vec3 v1 = pos + glm::vec3(size, 0, 0);
+    glm::vec3 v2 = pos + glm::vec3(size, size, 0);
+    glm::vec3 v3 = pos + glm::vec3(0, size, 0);
+    glm::vec3 v4 = pos + glm::vec3(0, 0, size);
+    glm::vec3 v5 = pos + glm::vec3(size, 0, size);
+    glm::vec3 v6 = pos + glm::vec3(size, size, size);
+    glm::vec3 v7 = pos + glm::vec3(0, size, size);
+
+    triangles.push_back(Triangle(v0, v1, v3, color));
+    //triangles.push_back(Triangle(v1, v2, v3, color));
+
+    /*triangles.push_back(Triangle(v1, v5, v6, color));
+    triangles.push_back(Triangle(v1, v6, v2, color));   
+
+    triangles.push_back(Triangle(v5, v4, v7, color));
+    triangles.push_back(Triangle(v5, v7, v6, color));
+
+    triangles.push_back(Triangle(v4, v0, v3, color));
+    triangles.push_back(Triangle(v4, v3, v7, color));
+
+    triangles.push_back(Triangle(v3, v2, v6, color));
+    triangles.push_back(Triangle(v3, v6, v7, color));
+
+    triangles.push_back(Triangle(v4, v5, v1, color));
+    triangles.push_back(Triangle(v4, v1, v0, color));*/
+
+    cube.numTriangles = 12;
+    cube.trianglesOffset = static_cast<int>(triangles.size()) - 12;
+
+    return cube;
+}
 
 std::string loadShaderSource(const char* filepath) {
     std::ifstream file(filepath);
@@ -120,7 +186,7 @@ void checkShaderCompilation(GLuint shader, const std::string& shaderSource, GLFW
 int main()
 {
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
@@ -216,7 +282,37 @@ int main()
     int frameCount = 0;
     std::vector<float> frameTimes;
     
-    
+    std::vector<Triangle> triangles;
+	std::vector<Object> objects;
+	std::vector<Sphere> spheres;
+
+    int numCubes = 1;
+	int numSpheres = 0;
+
+    std::mt19937 rng(std::random_device{}());
+
+	glm::vec3 minPos(-10.0f, -10.0f, -10.0f);
+	glm::vec3 maxPos(10.0f, 10.0f, 10.0f);
+
+    std::uniform_real_distribution<float> randX(minPos.x, maxPos.x);
+    std::uniform_real_distribution<float> randY(minPos.y, maxPos.y);
+    std::uniform_real_distribution<float> randZ(minPos.z, maxPos.z);
+    std::uniform_real_distribution<float> randRadius(0.1f, 2.0f);
+    std::uniform_real_distribution<float> randColor(0.0f, 1.0f);
+
+    for (int i = 0; i < numSpheres; ++i) {
+        Sphere s;
+        s.center = glm::vec3(randX(rng), randY(rng), randZ(rng));
+        s.radius = randRadius(rng);
+        s.color = glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f);
+        spheres.push_back(s);
+    }
+
+    for (int i = 0; i < numCubes; ++i) {
+        int triIndex = static_cast<int>(triangles.size());
+        Object cube = createCube(glm::vec3(randX(rng), randY(rng), randZ(rng)), 1, glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f), triangles);
+        objects.push_back(cube);
+    }
 
     while (!glfwWindowShouldClose(window))
     {
@@ -232,7 +328,32 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        GLuint triangleSSBO, objectSSBO, sphereSSBO;
+
+        
+
+        glGenBuffers(1, &triangleSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, triangleSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, triangles.size() * sizeof(Triangle), triangles.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, triangleSSBO); // Binding 0
+
+        glGenBuffers(1, &objectSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, objectSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, objects.size() * sizeof(Object), objects.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, objectSSBO); // Binding 1
+
+        glGenBuffers(1, &sphereSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sphereSSBO); // Binding 2
+
         glUseProgram(shaderProgram);
+
+        GLint locNumCubes = glGetUniformLocation(shaderProgram, "numCubes");
+        glUniform1i(locNumCubes, static_cast<GLint>(objects.size()));
+
+        GLint locNumSpheres = glGetUniformLocation(shaderProgram, "numSpheres");
+        glUniform1i(locNumSpheres, static_cast<GLint>(spheres.size()));
         
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
@@ -266,19 +387,19 @@ int main()
         }
     }
 
-    float totalFrameTime = 0.0f;
-    for (const auto& time : frameTimes) {
-        totalFrameTime += time;
-    }
-    float averageFrameTime = totalFrameTime / frameTimes.size();
-    std::cout << "Average Frame Time (ms): " << averageFrameTime << std::endl;
+    //float totalFrameTime = 0.0f;
+    //for (const auto& time : frameTimes) {
+    //    totalFrameTime += time;
+    //}
+    //float averageFrameTime = totalFrameTime / frameTimes.size();
+    //std::cout << "Average Frame Time (ms): " << averageFrameTime << std::endl;
 
-    std::ofstream outFile("../performance_metrics_100.csv");
-    outFile << "Frame,FrameTime_ms,Cubes" << std::endl;
-    for (size_t i = 0; i < frameTimes.size(); ++i) {
-        outFile << i + 1 << "," << frameTimes[i] << "," << 100 << std::endl;
-    }
-    outFile.close();
+    //std::ofstream outFile("../performance_metrics_20.csv");
+    //outFile << "Frame,FrameTime_ms,Cubes" << std::endl;
+    //for (size_t i = 0; i < frameTimes.size(); ++i) {
+    //    outFile << i + 1 << "," << frameTimes[i] << "," << 20 << std::endl;
+    //}
+    //outFile.close();
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
