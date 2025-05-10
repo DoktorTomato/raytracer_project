@@ -14,7 +14,7 @@
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f, 5.0f,  3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f,  0.0f);
 
@@ -29,36 +29,31 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 struct alignas(16) Sphere {
-	glm::vec3 center;
-	float radius;
-	glm::vec4 color;
+    glm::vec4 centerRadius;
+    glm::vec4 color;
 };
 
-struct alignas(16) Triangle
-{
-    glm::vec3 v1;
-    glm::vec3 v2;
-    glm::vec3 v3;
+struct alignas(16) Triangle {
+    glm::vec4 v1;
+    glm::vec4 v2;
+    glm::vec4 v3;
     glm::vec4 color;
 
     Triangle(glm::vec3 vertex1, glm::vec3 vertex2, glm::vec3 vertex3, glm::vec4 col)
-        : v1(vertex1), v2(vertex2), v3(vertex3), color(col) {
+        : v1(glm::vec4(vertex1, 1.0f)), v2(glm::vec4(vertex2, 1.0f)), v3(glm::vec4(vertex3, 1.0f)), color(col) {
     }
 };
 
 struct alignas(16) Object {
-	glm::vec4 color;
-	glm::vec3 position;
-    float scale;
-	int numTriangles;
-	int trianglesOffset;
+    glm::vec4 color;
+    glm::vec4 positionScale;
+    glm::ivec4 triangleInfo;
 };
 
 Object createCube(glm::vec3 pos, float size, glm::vec4 color, std::vector<Triangle>& triangles) {
     Object cube;
-    cube.position = pos;
-    cube.scale = size;
     cube.color = color;
+    cube.positionScale = glm::vec4(pos, size);
 
     glm::vec3 v0 = pos;
     glm::vec3 v1 = pos + glm::vec3(size, 0, 0);
@@ -70,9 +65,9 @@ Object createCube(glm::vec3 pos, float size, glm::vec4 color, std::vector<Triang
     glm::vec3 v7 = pos + glm::vec3(0, size, size);
 
     triangles.push_back(Triangle(v0, v1, v3, color));
-    //triangles.push_back(Triangle(v1, v2, v3, color));
+    triangles.push_back(Triangle(v1, v2, v3, color));
 
-    /*triangles.push_back(Triangle(v1, v5, v6, color));
+    triangles.push_back(Triangle(v1, v5, v6, color));
     triangles.push_back(Triangle(v1, v6, v2, color));   
 
     triangles.push_back(Triangle(v5, v4, v7, color));
@@ -85,10 +80,9 @@ Object createCube(glm::vec3 pos, float size, glm::vec4 color, std::vector<Triang
     triangles.push_back(Triangle(v3, v6, v7, color));
 
     triangles.push_back(Triangle(v4, v5, v1, color));
-    triangles.push_back(Triangle(v4, v1, v0, color));*/
+    triangles.push_back(Triangle(v4, v1, v0, color));
 
-    cube.numTriangles = 12;
-    cube.trianglesOffset = static_cast<int>(triangles.size()) - 12;
+    cube.triangleInfo = glm::ivec4(12, static_cast<int>(triangles.size()) - 12, 0, 0);
 
     return cube;
 }
@@ -286,8 +280,8 @@ int main()
 	std::vector<Object> objects;
 	std::vector<Sphere> spheres;
 
-    int numCubes = 1;
-	int numSpheres = 0;
+    int numCubes = 5;
+	int numSpheres = 5;
 
     std::mt19937 rng(std::random_device{}());
 
@@ -302,8 +296,7 @@ int main()
 
     for (int i = 0; i < numSpheres; ++i) {
         Sphere s;
-        s.center = glm::vec3(randX(rng), randY(rng), randZ(rng));
-        s.radius = randRadius(rng);
+        s.centerRadius = glm::vec4(randX(rng), randY(rng), randZ(rng), randRadius(rng));
         s.color = glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f);
         spheres.push_back(s);
     }

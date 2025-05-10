@@ -74,6 +74,10 @@
     <IncludePath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\lib\Windows;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
