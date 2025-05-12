@@ -9,7 +9,7 @@ uniform mat4 projection;
 
 uniform int numCubes;
 uniform int numSpheres;
-const int amountOfLights = 3; // maximum amountOfLights is 6
+const int amountOfLights = 1; // maximum amountOfLights is 6
 
 struct Ray {
     vec3 origin;
