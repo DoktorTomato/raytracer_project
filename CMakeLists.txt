@@ -7,24 +7,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include_directories(include ./include)
 
 set(SOURCES
-        raytracer/main.cpp
-        raytracer/glad.c
+    raytracer/main.cpp
+    raytracer/glad.c
 )
 
-# Link GLFW
 find_package(glfw3 REQUIRED)
 if(WIN32)
     link_directories(${CMAKE_SOURCE_DIR}/lib/Windows)
-else()
+elseif(APPLE)
     link_directories(${CMAKE_SOURCE_DIR}/lib/MacOS)
+elseif(UNIX)
+    link_directories(${CMAKE_SOURCE_DIR}/lib/Linux)
 endif()
 
 add_executable(raytracer ${SOURCES})
 
-if(APPLE)
+if(WIN32)
+    target_link_libraries(raytracer glfw3 opengl32)
+elseif(APPLE)
     target_link_libraries(raytracer glfw "-framework OpenGL")
-else()
-    target_link_libraries(raytracer glfw GL)
+elseif(UNIX)
+    target_link_libraries(raytracer glfw GL X11 pthread Xrandr Xi)
 endif()
 
 add_custom_command(
