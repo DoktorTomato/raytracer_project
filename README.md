@@ -11,7 +11,8 @@ Mentor: [Ostap Trush](https://github.com/Adeon18)
 - g++
 - GLFW
 - GLAD
-(GLFW and GLAD are inlcuded in the project but be aware)
+- GLM
+(GLFW, GLM and GLAD are inlcuded in the project but be aware)
 
 ### Compilation (Availble for Windows and MacOS)
 
@@ -21,18 +22,11 @@ Mentor: [Ostap Trush](https://github.com/Adeon18)
 4. cmake ..
 5. make (or alternatively cmake --build .)
 
-TODO: Add Linux support
-
 ### Usage
 
 In the build folder run executable compiled earlier.
 1. cd build
 2. ./raytracer
-
-### Important!
-
-MIGHT NOT COMPILE ON WINDOWS!!!
-For windows testing Visual Studio was used which makes the process of compilation and running very simple. Our project should work on Windows but there might be some issues. Everythong will be fixed later.
 
 ### Results
 
