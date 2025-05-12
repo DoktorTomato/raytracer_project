@@ -135,12 +135,10 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec3 hitNormal, inou
 }
 
 bool intersectGround(Ray ray, out float t, out vec3 hitNormal, inout float tClosest) {
-    // Plane: normal up, passing through (0, -1, 0)
     vec3 n  = vec3(0.0, 1.0, 0.0);
     vec3 p0 = vec3(0.0, -1.0, 0.0);
 
     float denom = dot(n, ray.direction);
-    // only rays pointing downward (denom < 0) can hit
     if (denom >= -1e-6) 
         return false;
 
@@ -155,62 +153,57 @@ bool intersectGround(Ray ray, out float t, out vec3 hitNormal, inout float tClos
 }
 
 float computeSoftShadow(vec3 fragPos, vec3 lightPos, float lightRadius) {
-    const int numSamples = 16; // Number of samples for soft shadows
+    const int numSamples = 16;
     float shadow = 0.0;
 
     for (int i = 0; i < numSamples; i++) {
-        // Randomly sample a point on the light's area
         vec3 randomOffset = lightRadius * vec3(
-            fract(sin(dot(vec3(i, fragPos.x, fragPos.y), vec3(12.9898, 78.233, 45.164))) * 43758.5453),
-            fract(sin(dot(vec3(i, fragPos.y, fragPos.z), vec3(93.9898, 67.345, 21.123))) * 43758.5453),
-            fract(sin(dot(vec3(i, fragPos.z, fragPos.x), vec3(45.123, 12.345, 78.456))) * 43758.5453)
+            fract(sin(dot(vec3(i,fragPos.x,fragPos.y),
+                          vec3(12.9898,78.233,45.164))) * 43758.5453),
+            fract(sin(dot(vec3(i,fragPos.y,fragPos.z),
+                          vec3(93.9898,67.345,21.123))) * 43758.5453),
+            fract(sin(dot(vec3(i,fragPos.z,fragPos.x),
+                          vec3(45.123,12.345,78.456))) * 43758.5453)
         );
 
-        vec3 jitteredLightPos = lightPos + randomOffset;
+        vec3 samplePos = lightPos + randomOffset;
+        vec3 Ldir = normalize(samplePos - fragPos);
+        float maxDist = length(samplePos - fragPos);
 
-        // Create a shadow ray
-        vec3 lightDir = normalize(jitteredLightPos - fragPos);
         Ray shadowRay;
-        shadowRay.origin = fragPos + 0.001 * lightDir; // Offset to avoid self-intersection
-        shadowRay.direction = lightDir;
+        shadowRay.origin = fragPos + 0.001 * Ldir;
+        shadowRay.direction = Ldir;
 
-        // Check if the shadow ray hits any object
-        float tClosest = 1e8;
+        float tClosest = maxDist;
         float t;
-        vec3 hitNormal;
+        vec3 nrm;
         bool inShadow = false;
 
         for (int j = 0; j < numSpheres; j++) {
-            if (tracingSphere(shadowRay, spheres[j], t, hitNormal, tClosest)) {
+            if (tracingSphere(shadowRay, spheres[j], t, nrm, tClosest)) {
                 inShadow = true;
                 break;
             }
         }
 
-        for (int j = 0; j < numCubes; j++) {
+        for (int j = 0; j < numCubes && !inShadow; j++) {
             Object obj = objects[j];
-            int numTris = obj.triangleInfo.x;
-            int offset = obj.triangleInfo.y;
-            for (int k = 0; k < numTris; k++) {
-                Triangle tri = triangles[offset + k];
-                if (tracingTriangle(shadowRay, tri, t, hitNormal, tClosest)) {
+            int cnt = obj.triangleInfo.x;
+            int off = obj.triangleInfo.y;
+            for (int k = 0; k < cnt; k++) {
+                if (tracingTriangle(shadowRay,
+                                    triangles[off + k],
+                                    t, nrm, tClosest)) {
                     inShadow = true;
                     break;
                 }
             }
-            if (inShadow) break;
         }
 
-        if (intersectGround(shadowRay, t, hitNormal, tClosest)) {
-            inShadow = true; // Hit the ground
-        }
-
-        if (!inShadow) {
-            shadow += 1.0; // Light contributes if no object blocks it
-        }
+        if (!inShadow)
+            shadow += 1.0;
     }
-
-    return shadow / float(numSamples); // Average shadow contribution
+    return shadow / float(numSamples);
 }
 
 vec4 calculateDirLight(DirLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec4 objectColor) {
@@ -369,5 +362,5 @@ void main() {
     
     generateLight(amountOfLights, lights, numPointLights, pointLights, numSpotLights, spotLights);
 
-    rayTrace(ray, lights, 0, pointLights, numPointLights, spotLights, 0);
+    rayTrace(ray, lights, 0, pointLights, numPointLights, spotLights, numSpotLights);
 }
