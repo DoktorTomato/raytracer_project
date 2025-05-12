@@ -156,16 +156,91 @@ bool intersectGround(Ray ray, out float t, out vec3 hitNormal, inout float tClos
     return false;
 }
 
+float computeSoftShadow(vec3 fragPos, vec3 lightPos, float lightRadius) {
+    const int numSamples = 16; // Number of samples for soft shadows
+    float shadow = 0.0;
+
+    for (int i = 0; i < numSamples; i++) {
+        // Randomly sample a point on the light's area
+        vec3 randomOffset = lightRadius * vec3(
+            fract(sin(dot(vec3(i, fragPos.x, fragPos.y), vec3(12.9898, 78.233, 45.164))) * 43758.5453),
+            fract(sin(dot(vec3(i, fragPos.y, fragPos.z), vec3(93.9898, 67.345, 21.123))) * 43758.5453),
+            fract(sin(dot(vec3(i, fragPos.z, fragPos.x), vec3(45.123, 12.345, 78.456))) * 43758.5453)
+        );
+
+        vec3 jitteredLightPos = lightPos + randomOffset;
+
+        // Create a shadow ray
+        vec3 lightDir = normalize(jitteredLightPos - fragPos);
+        Ray shadowRay;
+        shadowRay.origin = fragPos + 0.001 * lightDir; // Offset to avoid self-intersection
+        shadowRay.direction = lightDir;
+
+        // Check if the shadow ray hits any object
+        float tClosest = 1e8;
+        float t;
+        vec3 hitNormal;
+        bool inShadow = false;
+
+        for (int j = 0; j < numSpheres; j++) {
+            if (tracingSphere(shadowRay, spheres[j], t, hitNormal, tClosest)) {
+                inShadow = true;
+                break;
+            }
+        }
+
+        for (int j = 0; j < numCubes; j++) {
+            Object obj = objects[j];
+            int numTris = obj.triangleInfo.x;
+            int offset = obj.triangleInfo.y;
+            for (int k = 0; k < numTris; k++) {
+                Triangle tri = triangles[offset + k];
+                if (tracingTriangle(shadowRay, tri, t, hitNormal, tClosest)) {
+                    inShadow = true;
+                    break;
+                }
+            }
+            if (inShadow) break;
+        }
+
+        // Check intersection with the ground plane
+        if (intersectGround(shadowRay, t, hitNormal, tClosest)) {
+            inShadow = true;
+        }
+
+        if (!inShadow) {
+            shadow += 1.0; // Light contributes if no object blocks it
+        }
+    }
+
+    return shadow / float(numSamples); // Average shadow contribution
+}
+
+vec4 calculateDirLight(DirLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec4 objectColor) {
+    vec3 lightDir = normalize(light.ray.origin - fragPos);
+    vec3 reflectDir = reflect(-lightDir, normal);
+
+    // float shadow = computeSoftShadow(fragPos, light.ray.origin, 0.5); // Adjust light radius as needed
+    
+    vec4 ambient = 0.1 * objectColor * light.color;
+    vec4 diffuse = max(dot(normal, lightDir), 0.0) * objectColor * light.color;
+    vec4 specular = pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
+
+    return ambient + 1 * (diffuse + specular);
+}
+
 vec4 calculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec4 objectColor) {
     vec3 lightDir = normalize(light.ray.origin - fragPos);
     float distance = length(light.ray.origin - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
+    float shadow = computeSoftShadow(fragPos, light.ray.origin, 0.5); // Adjust light radius as needed
+
     vec4 ambient = 0.1 * objectColor * light.color;
     vec4 diffuse = max(dot(normal, lightDir), 0.0) * objectColor * light.color;
     vec4 specular = pow(max(dot(viewDir, reflect(-lightDir, normal)), 0.0), 32.0) * light.color;
 
-    return (ambient + diffuse + specular) * attenuation;
+    return (ambient + shadow * (diffuse + specular)) * attenuation;
 }
 
 vec4 calculateSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec4 objectColor) {
@@ -174,14 +249,16 @@ vec4 calculateSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
 
     float theta = dot(lightDir, normalize(-light.ray.direction));
-    float epsilon = max(light.cutOff - light.outerCutOff, 0.001); // Avoid division by zero
+    float epsilon = max(light.cutOff - light.outerCutOff, 0.001);
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
+
+    float shadow = computeSoftShadow(fragPos, light.ray.origin, 0.5); // Adjust light radius as needed
 
     vec4 ambient = 0.1 * objectColor * light.color;
     vec4 diffuse = max(dot(normal, lightDir), 0.0) * objectColor * light.color;
     vec4 specular = pow(max(dot(viewDir, reflect(-lightDir, normal)), 0.0), 32.0) * light.color;
 
-    return (ambient + diffuse + specular) * intensity * attenuation;
+    return (ambient + shadow * (diffuse + specular)) * intensity * attenuation;
 }
 
 void rayTrace(Ray ray, DirLight lights[amountOfLights], int amountOfLight, PointLight pointLights[numPointLights], int numPointLight, SpotLight spotLights[numSpotLights], int numSpotLight) {
@@ -225,15 +302,7 @@ void rayTrace(Ray ray, DirLight lights[amountOfLights], int amountOfLight, Point
         vec3 viewDir = normalize(ray.origin - pos);
         vec4 finColor = vec4(0.0);
         for (int i = 0; i < amountOfLight; i++) {
-            DirLight light = lights[i];
-            vec3 lightDir = normalize(light.ray.origin - pos);
-            vec3 reflectDir = reflect(-lightDir, hitNormal);
-
-            vec4 diff = max(dot(hitNormal, lightDir), 0.0) * objColor * light.color;
-            vec4 spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
-            vec4 ambient = 0.1 * objColor * light.color;
-
-            finColor += (diff + spec + ambient);
+            finColor += calculateDirLight(lights[i], hitNormal, pos, viewDir, objColor);
         }
         for (int i = 0; i < numPointLight; i++) {
             finColor += calculatePointLight(pointLights[i], hitNormal, pos, viewDir, objColor);
@@ -302,5 +371,5 @@ void main() {
     
     generateLight(amountOfLights, lights, numPointLights, pointLights, numSpotLights, spotLights);
 
-    rayTrace(ray, lights, 0, pointLights, numPointLights, spotLights, numSpotLights);
+    rayTrace(ray, lights, amountOfLights, pointLights, numPointLights, spotLights, numSpotLights);
 }
