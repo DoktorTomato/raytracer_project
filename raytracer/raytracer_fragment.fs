@@ -310,6 +310,7 @@ void rayTrace(Ray ray, DirLight lights[amountOfLights], int amountOfLight, Point
         for (int i = 0; i < numSpotLight; i++) {
             finColor += calculateSpotLight(spotLights[i], hitNormal, pos, viewDir, objColor);
         }
+
         FragColor = clamp(finColor, 0.0, 1.0);
     } else {
         FragColor = vec4(0.0, 0.0, 0.0, 1.0);

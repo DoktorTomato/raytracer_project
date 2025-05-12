@@ -10,6 +10,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <random>
+#include "tiny_obj_loader.h"
 
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
@@ -49,6 +50,74 @@ struct alignas(16) Object {
     glm::vec4 positionScale;
     glm::ivec4 triangleInfo;
 };
+
+Object loadModel(std::string inputfile, std::vector<Triangle>& triangles) {
+	Object obj;
+
+    tinyobj::ObjReaderConfig reader_config;
+    reader_config.mtl_search_path = "./"; // Path to material files
+
+    tinyobj::ObjReader reader;
+
+    if (!reader.ParseFromFile(inputfile, reader_config)) {
+        if (!reader.Error().empty()) {
+            std::cerr << "TinyObjReader: " << reader.Error();
+        }
+        exit(1);
+    }
+
+    if (!reader.Warning().empty()) {
+        std::cout << "TinyObjReader: " << reader.Warning();
+    }
+
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+
+	size_t numTriangles = 0;
+
+	for (size_t s = 0; s < shapes.size(); s++) {
+		size_t index_offset = 0;
+		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+			size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+			if (fv != 3) {
+				std::cerr << "Only triangles are supported" << std::endl;
+				exit(1);
+			}
+			numTriangles += fv;
+			glm::vec3 v0, v1, v2;
+			for (size_t v = 0; v < fv; v++) {
+                tinyobj::index_t idx0 = shapes[s].mesh.indices[index_offset + 0];
+                tinyobj::index_t idx1 = shapes[s].mesh.indices[index_offset + 1];
+                tinyobj::index_t idx2 = shapes[s].mesh.indices[index_offset + 2];
+
+                glm::vec3 v0 = glm::vec3(
+                    attrib.vertices[3 * idx0.vertex_index + 0],
+                    attrib.vertices[3 * idx0.vertex_index + 1],
+                    attrib.vertices[3 * idx0.vertex_index + 2]);
+
+                glm::vec3 v1 = glm::vec3(
+                    attrib.vertices[3 * idx1.vertex_index + 0],
+                    attrib.vertices[3 * idx1.vertex_index + 1],
+                    attrib.vertices[3 * idx1.vertex_index + 2]);
+
+                glm::vec3 v2 = glm::vec3(
+                    attrib.vertices[3 * idx2.vertex_index + 0],
+                    attrib.vertices[3 * idx2.vertex_index + 1],
+                    attrib.vertices[3 * idx2.vertex_index + 2]);
+
+				glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+				triangles.push_back(Triangle(v0, v1, v2, color));
+			}
+			index_offset += fv;
+		}
+	}
+
+	obj.triangleInfo = glm::ivec4(numTriangles, static_cast<int>(triangles.size()) - numTriangles, 0, 0);
+	obj.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	obj.positionScale = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return obj;
+}
 
 Object createCube(glm::vec3 pos, float size, glm::vec4 color, std::vector<Triangle>& triangles) {
     Object cube;
@@ -306,6 +375,9 @@ int main()
         Object cube = createCube(glm::vec3(randX(rng), randY(rng), randZ(rng)), 1, glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f), triangles);
         objects.push_back(cube);
     }
+
+	/*Object obj = loadModel("./teapot.obj", triangles);
+	objects.push_back(obj);*/
 
     while (!glfwWindowShouldClose(window))
     {

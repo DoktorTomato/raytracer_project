@@ -76,7 +76,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\lib\Windows;$(LibraryPath)</LibraryPath>
+    <ExecutablePath>C:\Users\ivan2\Documents\UCU\ACS\raytracer\raytracer;$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -133,11 +134,13 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="tiny_obj_loader.cc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.gitignore" />
