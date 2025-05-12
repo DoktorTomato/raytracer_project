@@ -30,6 +30,16 @@ elseif(UNIX)
     target_link_libraries(raytracer glfw GL X11 pthread Xrandr Xi)
 endif()
 
+add_library(tinyobjloader STATIC
+    ${PROJECT_SOURCE_DIR}/include/tiny_obj_loader.cc
+)
+
+target_include_directories(tinyobjloader PUBLIC
+    ${PROJECT_SOURCE_DIR}/include
+)
+
+target_link_libraries(raytracer tinyobjloader)
+
 add_custom_command(
     TARGET raytracer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
