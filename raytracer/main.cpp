@@ -349,8 +349,8 @@ int main()
 	std::vector<Object> objects;
 	std::vector<Sphere> spheres;
 
-    int numCubes = 0;
-	int numSpheres = 0;
+    int numCubes = 5;
+	int numSpheres = 5;
 
     std::mt19937 rng(std::random_device{}());
 
@@ -376,8 +376,8 @@ int main()
         objects.push_back(cube);
     }
 
-	Object obj = loadModel("./teapot.obj", triangles);
-	objects.push_back(obj);
+	/*Object obj = loadModel("./teapot.obj", triangles);
+	objects.push_back(obj);*/
 
     while (!glfwWindowShouldClose(window))
     {

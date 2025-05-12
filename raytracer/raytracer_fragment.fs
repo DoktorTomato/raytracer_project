@@ -9,7 +9,7 @@ uniform mat4 projection;
 
 uniform int numCubes;
 uniform int numSpheres;
-const int amountOfLights = 1; // maximum amountOfLights is 6
+const int amountOfLights = 6; // maximum amountOfLights is 6
 
 struct Ray {
     vec3 origin;
@@ -176,16 +176,27 @@ void rayTrace(Ray ray, DirLight lights[amountOfLights], int amountOfLight) {
         vec4 finColor = vec4(0.0);
         for (int i = 0; i < amountOfLight; i++) {
             DirLight light = lights[i];
-            vec3 lightDir = normalize(light.ray.origin - pos);
+
+            vec3 lightVec = light.ray.origin - pos;
+            float distance = length(lightVec);
+            vec3 lightDir = normalize(lightVec);
             vec3 viewDir = normalize(ray.origin - pos);
             vec3 reflectDir = reflect(-lightDir, hitNormal);
 
-            vec4 diff = max(dot(hitNormal, lightDir), 0.0) * objColor * light.color;
-            vec4 spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
-            vec4 ambient = 0.1 * objColor * light.color;
+            // Attenuation factors (you can tweak these values for visual effect)
+            float kc = 1.0;
+            float kl = 0.22;
+            float kq = 0.20;
+            float attenuation = 1.0 / (kc + kl * distance + kq * distance * distance);
+
+            // Apply attenuation
+            vec4 diff = attenuation * max(dot(hitNormal, lightDir), 0.0) * objColor * light.color;
+            vec4 spec = attenuation * pow(max(dot(viewDir, reflectDir), 0.0), 32.0) * light.color;
+            vec4 ambient = 0.1 * objColor * light.color; // Ambient is usually not attenuated
 
             finColor += (diff + spec + ambient);
         }
+
         FragColor = clamp(finColor, 0.0, 1.0);
     } else {
         FragColor = vec4(0.0, 0.0, 0.0, 1.0);
