@@ -35,13 +35,17 @@ You can also change amount of objects in space by changing values of variables (
 
 Here are some screenshots in the program:
 
-![](screenshots/image.png)
+![](screenshots/scene.png)
 
-![](screenshots/image-1.png)
+![](screenshots/tree.png)
 
-![](screenshots/image-2.png)
+![](screenshots/photo_1_2025-05-13_10-27-44.jpg)
 
-![](screenshots/image-3.png)
+![](screenshots/photo_2_2025-05-13_10-27-44.jpg)
+
+![](screenshots/photo_3_2025-05-13_10-27-44.jpg)
+
+![](screenshots/photo_4_2025-05-13_10-27-44.jpg)
 
 ![](screenshots/image-4.png)
 
