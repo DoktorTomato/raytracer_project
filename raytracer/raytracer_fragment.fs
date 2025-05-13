@@ -333,14 +333,14 @@ void generateLight(int num, out DirLight res[amountOfLights], int numPointLights
     }
 
     for (int i = 0; i < numSpotLights; i++) {
-        spotLights[i].ray.origin = vec3(0.0, 7.0, 0.0);
+        spotLights[i].ray.origin = vec3(0.0, 50.0, 0.0);
         spotLights[i].ray.direction = normalize(vec3(0.0, -1.0, 0.0));
         spotLights[i].color = colors[4];
         spotLights[i].cutOff = cos(radians(12.5));
-        spotLights[i].outerCutOff = cos(radians(27.5));
+        spotLights[i].outerCutOff = cos(radians(30.5));
         spotLights[i].constant = 1.0;
-        spotLights[i].linear = 0.09;
-        spotLights[i].quadratic = 0.032;
+        spotLights[i].linear = 0.014;
+        spotLights[i].quadratic = 0.0007;
     }
 }
 
@@ -362,5 +362,5 @@ void main() {
     
     generateLight(amountOfLights, lights, numPointLights, pointLights, numSpotLights, spotLights);
 
-    rayTrace(ray, lights, 0, pointLights, numPointLights, spotLights, numSpotLights);
+    rayTrace(ray, lights, 1, pointLights, 1, spotLights, 1);
 }

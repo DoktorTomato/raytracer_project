@@ -15,7 +15,7 @@
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 5.0f,  3.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f, 7.0f,  3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f,  0.0f);
 
@@ -363,7 +363,7 @@ int main()
     std::uniform_real_distribution<float> randRadius(0.1f, 2.0f);
     std::uniform_real_distribution<float> randColor(0.0f, 1.0f);
 
-    for (int i = 0; i < numSpheres; ++i) {
+    /*for (int i = 0; i < numSpheres; ++i) {
         Sphere s;
         s.centerRadius = glm::vec4(randX(rng), randY(rng), randZ(rng), randRadius(rng));
         s.color = glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f);
@@ -374,10 +374,27 @@ int main()
         int triIndex = static_cast<int>(triangles.size());
         Object cube = createCube(glm::vec3(randX(rng), randY(rng), randZ(rng)), 1, glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f), triangles);
         objects.push_back(cube);
-    }
+    }*/
 
-	/*Object obj = loadModel("./teapot.obj", triangles);
+	/*Object obj = loadModel("./low_poly_tree/Lowpoly_tree_sample.obj", triangles);
 	objects.push_back(obj);*/
+
+    Sphere s1;
+    s1.centerRadius = glm::vec4(1.0f, 2.0f, -13.0f, 2.0f);
+    s1.color = glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f);
+    spheres.push_back(s1);
+
+    Sphere s2;
+    s2.centerRadius = glm::vec4(-5.0f, 2.0f, -13.0f, 2.0f);
+    s2.color = glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f);
+    spheres.push_back(s2);
+
+    int triIndex = static_cast<int>(triangles.size());
+    Object cube1 = createCube(glm::vec3(-4.0f, 2.0f, -6.0f), 1, glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f), triangles);
+    objects.push_back(cube1);
+
+    Object cube2 = createCube(glm::vec3(1.0f, 2.0f, -6.0f), 3, glm::vec4(randColor(rng), randColor(rng), randColor(rng), 1.0f), triangles);
+    objects.push_back(cube2);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -394,8 +411,6 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         GLuint triangleSSBO, objectSSBO, sphereSSBO;
-
-        
 
         glGenBuffers(1, &triangleSSBO);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, triangleSSBO);
