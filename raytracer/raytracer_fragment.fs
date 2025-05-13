@@ -135,7 +135,7 @@ bool tracingSphere(Ray ray, Sphere sphere, out float t, out vec3 hitNormal, inou
 }
 
 bool intersectGround(Ray ray, out float t, out vec3 hitNormal, inout float tClosest) {
-    vec3 n  = vec3(0.0, 1.0, 0.0);
+    vec3 n = vec3(0.0, 1.0, 0.0);
     vec3 p0 = vec3(0.0, -1.0, 0.0);
 
     float denom = dot(n, ray.direction);
@@ -144,9 +144,9 @@ bool intersectGround(Ray ray, out float t, out vec3 hitNormal, inout float tClos
 
     float tCandidate = dot(p0 - ray.origin, n) / denom;
     if (tCandidate > 0.001 && tCandidate < tClosest) {
-        t          = tCandidate;
-        hitNormal  = n;
-        tClosest   = tCandidate;
+        t = tCandidate;
+        hitNormal = n;
+        tClosest = tCandidate;
         return true;
     }
     return false;
