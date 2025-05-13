@@ -5,7 +5,7 @@ Mentor: [Ostap Trush](https://github.com/Adeon18)
 
 ## Prerequisites
 
-- OpenGL (at least 3.3)
+- OpenGL (at least 4.3)
 - CMake
 - Make
 - g++
